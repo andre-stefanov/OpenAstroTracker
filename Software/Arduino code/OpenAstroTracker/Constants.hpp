@@ -4,6 +4,10 @@
 * This file contains constants that should not be changed.
 */
 
+// Supported display types
+#define DISPLAY_NONE    0
+#define DISPLAY_LCD     1
+
 // Supported stepper models, do not modify these values.
 #define STEPPER_TYPE_28BYJ48  0
 #define STEPPER_TYPE_NEMA17   1

@@ -1,9 +1,12 @@
 #pragma once
 #include "Constants.hpp"
+
 /*
 * This Configuration file contains basic settings. Use Configuration_adv for
 * more advanced adjustments! 
 */
+
+#define DISPLAY_TYPE DISPLAY_LCD
 
 // Set to 1 for the northern hemisphere, 0 otherwise
 #define NORTHERN_HEMISPHERE 1
