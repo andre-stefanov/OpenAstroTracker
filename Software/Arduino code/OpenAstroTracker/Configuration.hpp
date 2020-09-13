@@ -6,13 +6,13 @@
 * more advanced adjustments! 
 */
 
-#define DISPLAY_TYPE DISPLAY_LCD
+#define DISPLAY_TYPE        DISPLAY_LCD1602_KEYPAD
 
 // Set to 1 for the northern hemisphere, 0 otherwise
 #define NORTHERN_HEMISPHERE 1
 
 // Used RA wheel version
-#define RA_WHEEL_VERSION 4
+#define RA_WHEEL_VERSION    4
 
 // Stepper types/models. See supported stepper values. Change according to the steppers you are using
 #define RA_STEPPER_TYPE     STEPPER_TYPE_28BYJ48

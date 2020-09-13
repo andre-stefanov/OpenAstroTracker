@@ -5,8 +5,9 @@
 */
 
 // Supported display types
-#define DISPLAY_NONE    0
-#define DISPLAY_LCD     1
+#define DISPLAY_NONE            0
+#define DISPLAY_LCD1602_KEYPAD  1
+#define DISPLAY_TFT_ILI9341     2
 
 // Supported stepper models, do not modify these values.
 #define STEPPER_TYPE_28BYJ48  0

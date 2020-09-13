@@ -10,16 +10,16 @@ Mount::~Mount()
 {
 }
 
-void Mount::loop() const
+void Mount::loop()
 {
 }
 
-void Mount::setState(State state) const
+void Mount::setState(State state)
 {
     LOG("Setting mount state to %i", state);
 }
 
-Mount::State Mount::getState() const
+Mount::State Mount::getState()
 {
     return state;
 }

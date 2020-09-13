@@ -1,34 +1,28 @@
 #include <log4arduino.h>
-#include <Vector.h>
 
 #include "inc/Config.hpp"
 #include "Mount.hpp"
 #include "Menu.hpp"
 #include "hal/HAL.h"
 
-#include HAL_HID_PATH(hal)
+Mount *mount = new Mount();
 
-Mount mount;
+#if DISPLAY_TYPE != DISPLAY_NONE
 
-MenuItem submenu_storage[5];
-Vector<MenuItem> menu_items(submenu_storage);
+SubMenu *menu_root = new SubMenu("Test");
 
-Menu menu = Menu(
+Menu *menu = new Menu(
     mount,
-    menu_items);
+    menu_root);
 
-DISPLAY(display, menu);
+HID *hid = hal::hid::create(menu);
 
-void initMenu() {
-    menu_items.push_back(SubMenu("item 1"));
-    menu_items.push_back(SubMenu("item 2"));
-}
+#endif
 
 void setup()
 {
-    Serial.begin(SERIAL_BAUD_RATE);
-
     // Initialize logging
+    DEBUG_SERIAL.begin(SERIAL_BAUD_RATE);
     LOG_INIT(&DEBUG_SERIAL);
 
     // Here it begins
@@ -37,7 +31,10 @@ void setup()
 
 void loop()
 {
-    mount.loop();
-    menu.loop();
-    display.update();
+    mount->loop();
+
+#if DISPLAY_TYPE != DISPLAY_NONE
+    menu->loop();
+    hid->loop();
+#endif
 }

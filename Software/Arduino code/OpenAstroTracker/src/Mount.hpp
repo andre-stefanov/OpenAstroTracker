@@ -12,14 +12,14 @@ public:
 
 private:
     State state;
-
+    
 public:
     Mount();
     ~Mount();
 
-    void loop() const;
+    void loop();
 
-    State getState() const;
+    State getState();
 
-    void setState(State state) const;
+    void setState(State state);
 };

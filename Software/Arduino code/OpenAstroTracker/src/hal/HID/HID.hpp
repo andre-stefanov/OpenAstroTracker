@@ -4,10 +4,10 @@
 
 class HID
 {
-private:
-    Menu &menu;
+protected:
+    Menu *menu;
 public:
-    HID(Menu &menu) : menu(menu) {}
+    HID(Menu *menu) : menu(menu) {}
 
-    virtual void update() = 0;
+    virtual void loop() = 0;
 };

@@ -1,9 +1,22 @@
 #pragma once
 
 #include "inc/Config.hpp"
+#if DISPLAY_TYPE != DISPLAY_NONE
+
 #include <WString.h>
-#include <Vector.h>
 #include "Mount.hpp"
+#include <LinkedList.h>
+
+enum MenuItemType
+{
+    SUBMENU,
+    INFO,
+    BOOLEAN,
+    INTEGER,
+    FLOAT
+};
+
+class SubMenu;
 
 /*
 * This is the base class for all menu items to be displayed.
@@ -12,49 +25,38 @@ class MenuItem
 {
 private:
     String title;
-
+    SubMenu *parent;
 public:
-    MenuItem(String title = "") : title(title) {}
-
-    String getTitle()
-    {
-        return title;
-    }
-
-    virtual String getContent() 
-    {
-        return "";
-    }
+    MenuItem(String title) : title(title) {}
+    virtual String getTitle();
+    virtual MenuItemType getType() const = 0;
 };
 
-class SubMenu : public MenuItem
+/*
+* A sub menu is just a container for multiple menu items which can be grouped together logically.
+*/
+class SubMenu : public MenuItem, public LinkedList<MenuItem*>
 {
 private:
-    Vector<MenuItem> items;
+    SubMenu *parent;
 public:
-    SubMenu(const String title) : MenuItem(title) {}
-
-    void addItem(MenuItem item) {
-        items.push_back(item);
-    }
-
-    Vector<MenuItem> getItems() {
-        return items;
-    }
-
-    String getContent() override
-    {
-        return "TODO";
-    }
+    SubMenu(String title) : MenuItem(title) {}
+    MenuItemType getType() const;
+    bool add(MenuItem* item);
+    bool add(int index, MenuItem* item);
 };
 
 class Menu
 {
 private:
-    const Mount &mount;
-    Vector<MenuItem> &items;
+    Mount *mount;
 
 public:
-    Menu(const Mount &mount, Vector<MenuItem> &items);
+    SubMenu *items;
+
+public:
+    Menu(Mount *mount, SubMenu *items);
     void loop();
 };
+
+#endif
