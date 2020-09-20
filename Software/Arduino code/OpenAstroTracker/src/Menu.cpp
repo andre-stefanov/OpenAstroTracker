@@ -13,14 +13,29 @@ MenuItemType SubMenu::getType() const
     return MenuItemType::SUBMENU;
 }
 
-bool SubMenu::add(MenuItem* item)
+int SubMenu::size()
 {
-    return LinkedList::add(item);
+    return items.size();
 }
 
-bool SubMenu::add(int index, MenuItem* item)
+MenuItem *SubMenu::get(int index)
 {
-    return LinkedList::add(index, item);
+    return items.get(index);
+}
+
+bool SubMenu::add(MenuItem *item)
+{
+    bool result = items.add(item);
+    if (result)
+    {
+        item->parent = this;
+    }
+    return result;
+}
+
+MenuItemType IntegerMenu::getType() const
+{
+    return MenuItemType::INTEGER;
 }
 
 Menu::Menu(Mount *mount, SubMenu *items) : mount(mount), items(items) {}

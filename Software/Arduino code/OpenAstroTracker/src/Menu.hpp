@@ -26,24 +26,45 @@ class MenuItem
 private:
     String title;
     SubMenu *parent;
+
 public:
     MenuItem(String title) : title(title) {}
     virtual String getTitle();
     virtual MenuItemType getType() const = 0;
+    friend class SubMenu;
 };
 
 /*
 * A sub menu is just a container for multiple menu items which can be grouped together logically.
 */
-class SubMenu : public MenuItem, public LinkedList<MenuItem*>
+class SubMenu : public MenuItem
 {
 private:
-    SubMenu *parent;
+    LinkedList<MenuItem *> items;
+
 public:
     SubMenu(String title) : MenuItem(title) {}
     MenuItemType getType() const;
-    bool add(MenuItem* item);
-    bool add(int index, MenuItem* item);
+
+    int size();
+    MenuItem *get(int index);
+    bool add(MenuItem *item);
+};
+
+template <class T>
+class ValueMenuItem : public MenuItem
+{
+private:
+    const void (*onSet)(T);
+protected:
+    ValueMenuItem(String title, const void (*onSet)(T)) : MenuItem(title), onSet(onSet) {}
+};
+
+class IntegerMenu : public ValueMenuItem<int>
+{
+public:
+    IntegerMenu(String title, const void (*onSet)(int)) : ValueMenuItem(title, onSet) {}
+    MenuItemType getType() const;
 };
 
 class Menu
