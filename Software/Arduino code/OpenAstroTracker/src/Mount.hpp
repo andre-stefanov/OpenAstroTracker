@@ -1,7 +1,10 @@
 #ifndef _MOUNT_HPP_
 #define _MOUNT_HPP_
 
+#if HEADLESS_CLIENT == 0
 #include <LiquidCrystal.h>
+#endif
+
 #include <AccelStepper.h>
 #include "inc/Config.hpp"
 #include "DayTime.hpp"
@@ -48,7 +51,8 @@
 #define EEPROM_LONGITUDE 6
 #define EEPROM_PITCH_OFFSET 7
 #define EEPROM_ROLL_OFFSET 8
-
+#define EEPROM_RA_PARKING_POS 9
+#define EEPROM_DEC_PARKING_POS 10
 
 //////////////////////////////////////////////////////////////////
 //
@@ -198,6 +202,9 @@ public:
 
   // Set the current stepper positions to be home.
   void setHome(bool clearZeroPos);
+  
+  // Set the current stepper positions to be parking position.
+  void setParkingPosition();
 
   // Auto Home with TMC2209 UART
   #if (RA_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART) || (DEC_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART)
@@ -273,7 +280,7 @@ private:
   void readPersistentData();
 
   // Writes a 16-bit value to persistent (EEPROM) storage
-  void writePersistentData(int which, int val);
+  void writePersistentData(int which, long val);
 
   void calculateRAandDECSteppers(float& targetRA, float& targetDEC);
   void displayStepperPosition();
@@ -301,6 +308,9 @@ private:
   int _maxDECAcceleration;
   int _backlashCorrectionSteps;
   int _moveRate;
+  long _raParkingPos;
+  long _decParkingPos;
+
 #if USE_GYRO_LEVEL == 1
   float _pitchCalibrationAngle;
   float _rollCalibrationAngle;
@@ -348,6 +358,7 @@ private:
   bool _stepperWasRunning;
   bool _correctForBacklash;
   bool _slewingToHome;
+  bool _slewingToPark;
   bool _bootComplete;
   
   static Mount* _instance;

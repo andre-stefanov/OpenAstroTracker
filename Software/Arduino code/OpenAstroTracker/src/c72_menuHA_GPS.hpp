@@ -4,20 +4,9 @@
 #include "../Configuration_adv.hpp"
 #include "../Configuration_pins.hpp"
 
-#if HEADLESS_CLIENT == 0
 #if USE_GPS == 1
 
-// States that HA menu displays goes through
-#define SHOWING_HA_SYNC 1
-#define SHOWING_HA_SET 2
-#define ENTER_HA_MANUALLY 3
-#define STARTING_GPS 4
-#define SIGNAL_AQCUIRED 5
-
-int indicator = 0;
-int haState = STARTING_GPS;
-
-bool gpsAqcuisitionComplete()
+bool gpsAqcuisitionComplete(int & indicator)
 {
     while (GPS_SERIAL_PORT.available())
     {
@@ -55,6 +44,18 @@ bool gpsAqcuisitionComplete()
     return false;
 }
 
+#if HEADLESS_CLIENT == 0
+
+// States that HA menu displays goes through
+#define SHOWING_HA_SYNC 1
+#define SHOWING_HA_SET 2
+#define ENTER_HA_MANUALLY 3
+#define STARTING_GPS 4
+#define SIGNAL_AQCUIRED 5
+
+int indicator = 0;
+int haState = STARTING_GPS;
+
 bool processHAKeys()
 {
     byte key;
@@ -62,7 +63,7 @@ bool processHAKeys()
 
     if (haState == STARTING_GPS)
     {
-        if (gpsAqcuisitionComplete())
+        if (gpsAqcuisitionComplete(indicator))
         {
             LOGV1(DEBUG_INFO, F("HA: GPS acquired"));
             GPS_SERIAL_PORT.end();
@@ -183,7 +184,7 @@ void printHASubmenu()
     }
     else if (haState == STARTING_GPS)
     {
-        sprintf(satBuffer, "  Found %u sats", gps.satellites.value());
+        sprintf(satBuffer, "  Found %lu sats", gps.satellites.value());
         satBuffer[0] = ind[indicator];
     }
     else if (haState == ENTER_HA_MANUALLY)
@@ -193,5 +194,6 @@ void printHASubmenu()
     }
     lcdMenu.printMenu(satBuffer);
 }
+
 #endif
 #endif

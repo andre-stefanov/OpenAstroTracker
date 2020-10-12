@@ -3,7 +3,11 @@
 #include "inc/Globals.hpp"
 #include "Utility.hpp"
 #include "WifiControl.hpp"
+#include "Gyro.hpp"
 
+#if USE_GPS == 1
+bool gpsAqcuisitionComplete(int & indicator); // defined in c72_menuHA_GPS.hpp
+#endif
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 // Serial support
@@ -40,6 +44,21 @@
 //      Returns: '|#' if slewing, ' #' if not
 //
 //------------------------------------------------------------------
+// GPS FAMILY
+//
+// :gT#
+//      Attempts to set the mount time and location from the GPS for 2 minutes. This is essentially a
+//      blocking call, no other activities take place (except tracking, but only if interrupt-driven).
+//      Use :Gt# and :Gg# to retrieve Lat and Long,
+//      Returns: 1 if the data was set, 0 if not (timedout)
+//
+// :gTnnn#
+//      Attempts to set the mount time and location from the GPS with a custom timeout. This is also blocking
+//      but by using a low timeout, you can avoid long pauses and let the user know that it's not ready yet.
+//      Where nnn is an integer defining the number of milliseconds to wait for the GPS to get a bearing.
+//      Returns: 1 if the data was set, 0 if not (timedout)
+//
+//------------------------------------------------------------------
 // GET FAMILY
 //
 // :GVP#
@@ -69,6 +88,17 @@
 //      Get Current Right Ascension
 //      Returns: HH:MM:SS
 //               Where HH is hour, MM is minutes, SS is seconds.
+//
+// :Gt#
+//      Get Site Latitude
+//      Returns: sDD*MM
+//               Where s is + or - and DD is the latitude in degrees and MM the minutes.
+//       
+// :Gg#
+//      Get Site Longitude
+//      Returns: DDD*MM
+//               Where DDD is the longitude in degrees and MM the minutes. Negative (W) longitudes have had 360 added to them.
+//       
 //
 // -- GET Extensions --
 // :GIS#
@@ -105,17 +135,6 @@
 //
 //       * Az and Alt are optional. The string may only be 3 characters long
 //
-//
-// : Gt#
-//      Get Site Latitude
-//      Returns: sDD*MM
-//               Where s is + or - and DD is the latitude in degrees and MM the minutes.
-//       
-// : Gg#
-//      Get Site Latitude
-//      Returns: DDD*MM
-//               Where DDD is the longitude in degrees and MM the minutes. Negative (W) longitudes have had 360 added to them.
-//       
 //------------------------------------------------------------------
 // SET FAMILY
 //
@@ -289,6 +308,30 @@
 //      Where nnn is the number of seconds the entire alignment should take.
 //      Returns: nothing
 //
+// :XL0#
+//      Turn off the Digital level
+//      Returns: 1# or 0# if there is no Digital Level
+//
+// :XL1#
+//      Turn on the Digital level
+//      Returns: 1# or 0# if there is no Digital Level
+//
+// :XLGR#
+//      Get Reference pitch and roll values (Digital Level)
+//      Returns: <pitch>,<roll># or 0# if there is no Digital Level
+//
+// :XLGC#
+//      Get current pitch and roll values (Digital Level)
+//      Returns: <pitch>,<roll># or 0# if there is no Digital Level
+//
+// :XLSR#
+//      Set Reference roll (Digital Level)
+//      Returns: 1# or 0# if there is no Digital Level
+//
+// :XLSP#
+//      Set Reference pitch (Digital Level)
+//      Returns: 1# or 0# if there is no Digital Level
+//
 // :XGB#
 //      Get Backlash correction steps 
 //      Get the number of steps the RA stepper motor needs to overshoot and backtrack when slewing east.
@@ -321,10 +364,13 @@
 //
 // :XGM#
 //      Get Mount configuration settings 
-//      Returns: <board>>,<RA Stepper Info>,<DEC Stepper Info>,#
+//      Returns: <board>,<RA Stepper Info>,<DEC Stepper Info>,<GPS info>,<AzAlt info>,<Gyro info>#
 //      Where <board> is one of the supported boards (currently Uno, Mega, ESP8266, ESP32)
 //            <Stepper Info> is a pipe-delimited string of Motor type (NEMA or 28BYJ), Pulley Teeth, Steps per revolution)
-//      Example: ESP32,28BYJ|16|4096.00,28BYJ|16|4096.00,#
+//            <GPS info> is either NO_GPS or GPS, depending on whether a GPS module is present
+//            <AzAlt info> is either NO_AZ_ALT or AUTO_AZ_ALT, depending on whether the AutoPA stepper motors are present
+//            <Gyro info> is either NO_GYRO or GYRO depending on whether the Digial level is present
+//      Example: ESP32,28BYJ|16|4096.00,28BYJ|16|4096.00,NO_GPS,NO_AZ_ALT,NO_GYRO#
 //
 // :XGN#
 //      Get network settings
@@ -477,6 +523,31 @@ String MeadeCommandProcessor::handleMeadeGetInfo(String inCmd) {
   }
 
   return "0#";
+}
+
+/////////////////////////////
+// GPS CONTROL
+/////////////////////////////
+String MeadeCommandProcessor::handleMeadeGPSCommands(String inCmd) {
+  #if USE_GPS == 1
+  if (inCmd[0] == 'T') {
+    unsigned long timeoutLen = 2UL * 60UL * 1000UL;
+    if (inCmd.length() > 1) {
+      timeoutLen = inCmd.substring(1).toInt();
+    }
+    // Wait at most 2 minutes
+    unsigned long timeoutTime = millis() + timeoutLen;
+    int indicator = 0;
+    while (millis() < timeoutTime) {
+      if (gpsAqcuisitionComplete(indicator)) {
+        LOGV1(DEBUG_MEADE, F("MEADE: GPS startup, GPS acquired"));
+        return "1";
+      }
+    }
+  }
+  #endif
+  LOGV1(DEBUG_MEADE, F("MEADE: GPS startup, no GPS signal"));
+  return "0";
 }
 
 /////////////////////////////
@@ -806,9 +877,41 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd) {
       _mount->setBacklashCorrection(inCmd.substring(2).toInt());
     }
   }
+  else if (inCmd[0] == 'L') { // Digital Level
+    #if USE_GYRO_LEVEL == 1
+    if (inCmd[1] == 'G') { // get values
+      if (inCmd[2] == 'R') { // get Calibration/Reference values
+        return String (_mount->getPitchCalibrationAngle(),4) + "," + String (_mount->getRollCalibrationAngle(),4) +"#";
+      }
+      else if (inCmd[2] == 'C') { // Get current values
+        auto angles = Gyro::getCurrentAngles();
+        return String (angles.pitchAngle,4) + "," + String (angles.rollAngle,4) +"#";
+      }
+    }
+    else if (inCmd[1] == 'S') { // set values
+      if (inCmd[2] == 'P') { // get Calibration/Reference values
+        _mount->setPitchCalibrationAngle(inCmd.substring(3).toFloat());
+        return String("1#");
+      }
+      else if (inCmd[2] == 'R') { 
+        _mount->setRollCalibrationAngle(inCmd.substring(3).toFloat());
+        return String("1#");
+      }
+    }
+    else if (inCmd[1] == '1') { // Turn on Gyro
+      Gyro::startup();
+      return String("1#");
+    }
+    else if (inCmd[1] == '0') { // Turn off Gyro
+      Gyro::shutdown();
+      return String("1#");
+    }
+    #endif
+    return String("0#");
+  }
+  
   return "";
 }
-
 
 /////////////////////////////
 // QUIT
@@ -881,6 +984,7 @@ String MeadeCommandProcessor::processCommand(String inCmd) {
       case 'S': return handleMeadeSetInfo(inCmd);
       case 'M': return handleMeadeMovement(inCmd);
       case 'G': return handleMeadeGetInfo(inCmd);
+      case 'g': return handleMeadeGPSCommands(inCmd);
       case 'C': return handleMeadeSyncControl(inCmd);
       case 'h': return handleMeadeHome(inCmd);
       case 'I': return handleMeadeInit(inCmd);
