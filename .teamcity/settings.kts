@@ -26,27 +26,66 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 
 version = "2020.1"
 
-project {
-
-    buildType(Firmware)
+data class BuildFlagValue(val value: Any, val name: String? = null) {
+    override fun toString() = name ?: value.toString()
 }
 
-object Firmware : BuildType({
-    name = "Firmware"
+data class BuildFlag(val flag: String, val value: BuildFlagValue)
+data class BuildFlagDef(val flag: String, val values: List<BuildFlagValue>)
 
-    vcs {
-        root(DslContext.settingsRoot, "+:Software/Arduino code/OpenAstroTracker => .")
-    }
+val boards = listOf(
+        "esp32",
+        "mega2560",
+        "uno"
+)
 
-    steps {
-        script {
-            name = "Build"
-            scriptContent = "platformio run"
+val displays = listOf(
+        BuildFlagValue(0, "LCD"),
+        BuildFlagValue(1, "Headless")
+)
+
+project {
+    for (board in boards) {
+        for (display in displays) {
+            buildType(buildFirmware(board, display))
         }
     }
+}
 
-    triggers {
+fun buildFirmware(board: String, display: BuildFlagValue): BuildType {
+    return BuildType {
+        id("""${board}_${display.value}""")
+        name = """$board ($display)"""
+
         vcs {
+            root(DslContext.settingsRoot, "+:Software/Arduino code/OpenAstroTracker => .")
+        }
+
+        steps {
+            script {
+                name = "Build"
+                scriptContent = """platformio run -e $board"""
+            }
         }
     }
-})
+}
+
+//object Firmware : BuildType({
+//    name = "Firmware"
+//
+//    vcs {
+//        root(DslContext.settingsRoot, "+:Software/Arduino code/OpenAstroTracker => .")
+//    }
+//
+//    steps {
+//        script {
+//            name = "Build"
+//            scriptContent = "platformio run"
+//        }
+//    }
+//
+//    triggers {
+//        vcs {
+//        }
+//    }
+//})
